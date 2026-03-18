@@ -1,3 +1,6 @@
+import 'dart:developer' as dev;
+
+import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +11,8 @@ import '../models/sdui_action.dart';
 import '../models/sdui_api.dart';
 import '../models/sdui_root.dart';
 import 'device_handler.dart';
+
+const _tag = 'ActionExecutor';
 
 /// Executes actions: api, navigate, popup, toast, setState, log,
 /// openUrl, analytics, chain, device.
@@ -66,17 +71,31 @@ class ActionExecutor {
 
   Future<void> _runApi(SduiAction action) async {
     final target = action.target;
-    if (target == null) return;
+    if (target == null) {
+      dev.log('[$_tag] API action has no target, skipping');
+      return;
+    }
     final apiJson = root.apis[target];
-    if (apiJson is! Map<String, dynamic>) return;
+    if (apiJson is! Map<String, dynamic>) {
+      dev.log('[$_tag] API "$target" not found in root.apis (available: ${root.apis.keys})');
+      return;
+    }
     final apiDef = SduiApi.fromJson(apiJson);
+    dev.log('[$_tag] Calling API "$target" → ${apiDef.method} ${apiDef.url}');
     try {
       final response = await _apiClient.call(apiDef);
       final data = response.data;
+      dev.log('[$_tag] API "$target" ✓ status=${response.statusCode} response=$data');
       final stateKey = apiDef.store ?? action.props?['stateKey'] as String? ?? target;
       _state.setStateKey(stateKey, data);
       if (action.onSuccess != null) run(action.onSuccess!);
     } catch (e) {
+      dev.log('[$_tag] API "$target" ✗ FAILED: $e');
+      if (e is dio.DioException) {
+        dev.log('[$_tag]   status: ${e.response?.statusCode}');
+        dev.log('[$_tag]   response body: ${e.response?.data}');
+        dev.log('[$_tag]   message: ${e.message}');
+      }
       if (action.onFail != null) {
         run(action.onFail!);
       } else {

@@ -2,6 +2,7 @@ import 'dart:developer' as dev;
 
 import 'package:dio/dio.dart' as dio;
 
+import '../sdui/config/screen_config.dart';
 import '../state/sdui_state_controller.dart';
 import '../sdui/models/sdui_api.dart';
 
@@ -43,9 +44,17 @@ class ApiClient {
     return out;
   }
 
+  /// Prepend baseUrl if the URL is a relative path (starts with /).
+  String _resolveUrl(String raw) {
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    final base = ScreenConfig.apiBaseUrl;
+    if (base.isEmpty) return raw;
+    return '${base.endsWith('/') ? base.substring(0, base.length - 1) : base}$raw';
+  }
+
   Future<dio.Response<dynamic>> call(SduiApi apiDef) async {
     final method = apiDef.method;
-    final url = _template(apiDef.url);
+    final url = _resolveUrl(_template(apiDef.url));
     final cacheKey = '$method:$url';
 
     if (apiDef.cache != null && apiDef.cache!.ttl > 0) {

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -276,7 +277,7 @@ class SduiText extends StatelessWidget {
 // rich_text: spans with mixed styles
 // ---------------------------------------------------------------------------
 
-class SduiRichText extends StatelessWidget {
+class SduiRichText extends StatefulWidget {
   final SduiNode node;
   final LayoutEngine engine;
   final bool enabled;
@@ -284,13 +285,33 @@ class SduiRichText extends StatelessWidget {
   const SduiRichText({super.key, required this.node, required this.engine, required this.enabled});
 
   @override
+  State<SduiRichText> createState() => _SduiRichTextState();
+}
+
+class _SduiRichTextState extends State<SduiRichText> {
+  final List<TapGestureRecognizer> _recognizers = [];
+
+  @override
+  void dispose() {
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final spans = node.props['spans'] as List? ?? [];
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    _recognizers.clear();
+
+    final spans = widget.node.props['spans'] as List? ?? [];
     final textSpans = <TextSpan>[];
 
     for (final span in spans) {
       if (span is! Map) continue;
-      final text = engine.expressionResolver.resolveString(span['text'] as String?);
+      final text = widget.engine.expressionResolver.resolveString(span['text'] as String?);
       final spanStyleRaw = span['style'] as Map<String, dynamic>?;
       Color? color;
       double? fontSize;
@@ -310,6 +331,21 @@ class SduiRichText extends StatelessWidget {
         if (td == 'underline') decoration = TextDecoration.underline;
       }
 
+      GestureRecognizer? recognizer;
+      final spanActions = span['actions'] as List?;
+      if (spanActions != null && spanActions.isNotEmpty) {
+        final tapRecognizer = TapGestureRecognizer()
+          ..onTap = () {
+            for (final a in spanActions) {
+              if (a is Map<String, dynamic>) {
+                widget.engine.actionExecutor.run(SduiAction.fromJson(a));
+              }
+            }
+          };
+        _recognizers.add(tapRecognizer);
+        recognizer = tapRecognizer;
+      }
+
       textSpans.add(TextSpan(
         text: text,
         style: TextStyle(
@@ -318,12 +354,13 @@ class SduiRichText extends StatelessWidget {
           fontWeight: fontWeight,
           decoration: decoration,
         ),
+        recognizer: recognizer,
       ));
     }
 
     return wrapEnabled(
       Text.rich(TextSpan(children: textSpans)),
-      enabled,
+      widget.enabled,
     );
   }
 }
