@@ -1,0 +1,28 @@
+{
+  "tokens": {
+    "colors": { "primary": "#1976D2", "background": "#FFFFFF" },
+    "spacing": { "md": 16 }
+  },
+  "styles": {
+    "classes": {
+      "screen": { "padding": 16, "backgroundColor": "#tokens.colors.background" },
+      "title": { "fontSize": 20, "fontWeight": "bold" }
+    }
+  },
+  "apis": {},
+  "actions": {},
+  "components": {},
+  "layout": {
+    "type": "screen",
+    "style": [".screen"],
+    "children": [
+      {
+        "type": "column",
+        "children": [
+          { "type": "text", "props": { "text": "Pharmacy" }, "style": [".title"] },
+          { "type": "text", "props": { "text": "Order medicines and health products." } }
+        ]
+      }
+    ]
+  }
+}
